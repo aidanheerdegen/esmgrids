@@ -86,8 +86,11 @@ class BaseGrid(object):
         # pole to be fixed.
         self.fix_pole_holes()
 
-        if self.area_t is None:
+        if self.area_t is None and kwargs.get('calcarea', False):
+        # if self.area_t is None:
             self.area_t = calc_area_of_polygons(self.clon_t, self.clat_t)
+        else:
+            print("No need to calculate area")
 
     def fix_pole_holes(self):
         pass
@@ -165,11 +168,7 @@ class BaseGrid(object):
         f.history = history
         f.close()
 
-        if write_test_scrip:
-            self.write_test_scrip(filename + '_test')
-
-
-    def write_test_scrip(self, filename):
+    def write_gridspec(self, filename):
         """
         Write out SCRIP grid contents in a format which is easier to read/test.
         """
@@ -181,20 +180,22 @@ class BaseGrid(object):
         clat = self.clat_t
         clon = self.clon_t
 
-        f.createDimension('lats', self.num_lat_points)
-        f.createDimension('lons', self.num_lon_points)
+        f.createDimension('lat', self.num_lat_points)
+        f.createDimension('lon', self.num_lon_points)
         f.createDimension('grid_corners', 4)
         f.createDimension('grid_rank', 2)
 
-        center_lat = f.createVariable('center_lat', 'f8', ('lats', 'lons'))
-        center_lat.units = 'degrees'
+        center_lat = f.createVariable('lat', 'f8', ('lat', 'lon'))
+        center_lat.units = 'degrees_north'
+        center_lat.bounds = 'corner_lat'
         center_lat[:] = y[:]
 
-        center_lon = f.createVariable('center_lon', 'f8', ('lats', 'lons'))
-        center_lon.units = 'degrees'
+        center_lon = f.createVariable('lon', 'f8', ('lat', 'lon'))
+        center_lon.units = 'degrees_east'
+        center_lon.bounds = 'corner_lon'
         center_lon[:] = x[:]
 
-        imask = f.createVariable('mask', 'i4', ('lats', 'lons'))
+        imask = f.createVariable('mask', 'i4', ('lat', 'lon'))
         imask.units = 'unitless'
         # Invert the mask. SCRIP uses zero for points that do not
         # participate.
@@ -204,16 +205,16 @@ class BaseGrid(object):
             imask[:] = 1 - self.mask_t[0, :, :]
 
         corner_lat = f.createVariable('corner_lat', 'f8',
-                                      ('lats', 'lons', 'grid_corners'))
-        corner_lat.units = 'degrees'
+                                      ('lat', 'lon', 'grid_corners'))
+        # corner_lat.units = 'degrees'
         corner_lat[:, :, 0] = clat[0, :, :].flatten()
         corner_lat[:, :, 1] = clat[1, :, :].flatten()
         corner_lat[:, :, 2] = clat[2, :, :].flatten()
         corner_lat[:, :, 3] = clat[3, :, :].flatten()
 
         corner_lon = f.createVariable('corner_lon', 'f8',
-                                      ('lats', 'lons', 'grid_corners'))
-        corner_lon.units = 'degrees'
+                                      ('lat', 'lon', 'grid_corners'))
+        # corner_lon.units = 'degrees'
         corner_lon[:, :, 0] = clon[0, :, :].flatten()
         corner_lon[:, :, 1] = clon[1, :, :].flatten()
         corner_lon[:, :, 2] = clon[2, :, :].flatten()
